@@ -274,6 +274,30 @@ torch.save({
     'optimizer_state_dict': optimizer.state_dict()
     }, PATH)
 
+#reload
 
+
+# specify our path
+PATH = "model.pt"
+
+# referencing pretrained model
+model = fasterrcnn_resnet50_fpn(weights="DEFAULT")
+
+num_classes = 2  # baseball and frame
+in_features = model.roi_heads.box_predictor.cls_score.in_features
+model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model.to(device)
+
+# recreating optimizer
+optimizer = torch.optim.SGD(model.parameters(), lr=0.005, momentum=0.9)
+
+# reload checkpoint
+checkpoint = torch.load(PATH, map_location=device)
+
+model.load_state_dict(checkpoint["model_state_dict"])
+optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+EPOCH = checkpoint["epoch"]
 
 
