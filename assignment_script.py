@@ -26,6 +26,8 @@ import cv2
 import xml.etree.ElementTree as ET
 import plotly.express as px
 
+import torchvision
+from torchvision.models.detection import fasterrcnn_resnet50_fpn
 
 # parse and extract labels from xml file
 
@@ -140,16 +142,15 @@ print("Dataset size:", len(data))
 
 # baseball neural network
 
-# pretrained COCO model
+# pretrained COCO model - found online after struggling to create own NN
 model = fasterrcnn_resnet50_fpn(weights="DEFAULT")
 
-# change head for YOUR problem (baseball = 1 class + background)
-num_classes = 2
+variables = 2     #baseball and frame
 
 in_features = model.roi_heads.box_predictor.cls_score.in_features
 model.roi_heads.box_predictor = torchvision.models.detection.faster_rcnn.FastRCNNPredictor(
         in_features,
-        num_classes
+        variables
     )
 
 class CustomBaseball(Dataset):
@@ -179,16 +180,13 @@ class CustomBaseball(Dataset):
 
 #dataset and loader
 
-def collate_fn(batch):
+def collate_fn(batch):          #batch function
     return tuple(zip(*batch))
 
 dataset = CustomBaseball(data)
 train_loader = DataLoader(dataset, batch_size=4, shuffle=True, collate_fn=collate_fn)
 
 #pretrained model
-
-import torchvision
-from torchvision.models.detection import fasterrcnn_resnet50_fpn
 
 model = fasterrcnn_resnet50_fpn(weights="DEFAULT")
 
@@ -203,18 +201,18 @@ model.roi_heads.box_predictor = torchvision.models.detection.faster_rcnn.FastRCN
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")   #don't think I have gpu with collab
 model.to(device)
 
-optimizer = torch.optim.SGD(model.parameters(), lr=0.005, momentum=0.9)   #may need to change
+optimizer = torch.optim.SGD(model.parameters(), lr=0.005, momentum=0.9)   #may need to change - ai recommendation
 
 
 #training loop
 
 def train_loop(train_loader, model, optimizer, device):
-    size = len(dataloader.dataset)
+    size = len(train_loader.dataset)
     #set the model to training mode
     #important for batch normalization and dropout layers
     #unnecessary in this situation but added for best practices
     model.train()
-    for batch, (X, y) in enumerate(dataloader):
+    for batch, (X, y) in enumerate(train_loader):
 
       # move to device
       X = X.to(device)
